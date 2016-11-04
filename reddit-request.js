@@ -1,17 +1,27 @@
 'use strict';
 var express = require('express');
-var fs = require('fs');
+// var fs = require('fs');
+var jsonfile = require('jsonfile');
 var request = require('request');
-var cheerio = require('cheerio');
+var _ = require('lodash');
 var sentiment = require('sentiment');
+var Promise = require("bluebird");
+var async = require('async');
+// var WordPOS = require('wordpos'),
+//     wordpos = new WordPOS();
+
+var eliminate = ['the', 'a', 'and', 'of', 'to', 'is', 'that',
+                'this', 'not', 'he', 'just', 'for', 'on', 'you',
+                'his', 'in', 'it', 'be', 'was', 'are', 'It', 'He',
+                'they', 'we', 'but', 'with', 'We', 'as', 'do', 're',
+                'so', 'https', 'or', 'com', 'have', 'can', 'from', 'what',
+                'by', 'at', 'their', 'an', 'all', 'about', 'out', 'who',
+                'there', 'here', 'then'];
 
 var app = express();
 
-// const https = require('https');
-
-// https.get('https://www.reddit.com/r/politics/comments/5alotj/texas_agriculture_commissioner_calls_hillary/.json', (res) => {
-//   console.log(res.data);
-// });
+var allWordsString = "";
+var a = 'a'
 
 function *findReplies(comment) {
   if (!comment) {return ;}
@@ -19,10 +29,18 @@ function *findReplies(comment) {
   for (var i = 0; i<comment.length; i++) {
     var commentMeta = comment[i].data;
 
-    yield {
-      author: commentMeta.author,
-      body: commentMeta.body
-    };
+    if (commentMeta.body && commentMeta.author !== "[deleted]") {
+      allWordsString = allWordsString + commentMeta.body + '';
+      var score = sentiment(commentMeta.body);
+
+      yield {
+        author: commentMeta.author,
+        body: commentMeta.body,
+        score: score
+      };
+    }
+
+    //to-do: check banned, distinguished
 
     if (commentMeta.replies) {
       yield *findReplies(commentMeta.replies.data.children);
@@ -31,8 +49,9 @@ function *findReplies(comment) {
 }
 
 app.get('/scrape', (req, res) => {
-  var url = 'https://www.reddit.com/r/politics/comments/5alotj/texas_agriculture_commissioner_calls_hillary/.json';
+  var url = 'https://www.reddit.com/r/The_Donald/comments/5axzor/feel_that_sharp_knife_in_your_back_bernie/.json';
   var allComments = [];
+
   request(url, (err, response, html) => {
     let commentJSON = JSON.parse(response.body);
     var header = response.body[0];
@@ -45,24 +64,74 @@ app.get('/scrape', (req, res) => {
       allComments.push(replyGrab.value);
       replyGrab = getReply.next();
     }
-    // for (i=0; i<comments.length; i++) {
-    //   let comment = comments[i].data;
-    //   flatComments.push({
-    //     body: comment.body,
-    //     author: comment.author
-    //   });
-    //
-    //   if (comment.replies) {
-    //     findChildren(comment);
-    //   }
-    // }
 
-    res.json(allComments);
+    if (replyGrab.done) {
+      console.log('comments separated');
+      var pattern = /\w+/g;
+      var matchedWords = allWordsString.match( pattern );
+
+      //using reduce to get the words we need
+      var counts = matchedWords.reduce(function ( stats, word ) {
+                      if ( stats.hasOwnProperty( word ) ) {
+                          stats[ word ] = stats[ word ] + 1;
+                      } else {
+                          stats[ word ] = 1;
+                      }
+                      return stats;
+                  }, {} );
+
+      var wordCloud = _.take(_.orderBy(_.reduce(counts, (res, v, k) => {
+            if (!_.includes(eliminate, k.toLowerCase()) && k.length > 3) {
+              res.push({ value: k, count: v});
+            }
+            return res;
+      }, []), 'count', 'desc'), 20);
+
+      let cleanComments = _.without(allComments, {});
+
+      async.map(cleanComments, (c, callback) => {
+        let authorUrl = 'https://www.reddit.com/user/' + c.author + '/comments/.json';
+
+        request(authorUrl, (err, response, html) => {
+          if (err) {
+            console.log(err);
+          } else {
+            let authorJSON = JSON.parse(response.body);
+
+            let authorComments = authorJSON.data.children;
+
+            let sentArray = _.map(authorComments, (c) => {
+              let commentSent = sentiment(c.data.body);
+              return commentSent.score;
+            });
+
+            let sentAvg = _.sum(sentArray) / sentArray.length;
+            c.sentAvg = sentAvg;
+            callback(err, c)
+          }
+        })
+      }, (err, result) => {
+        let output = {title: 'Feel the sharp knife in your back, Bernie supporters? vote trump', comments: result, wordCloud: wordCloud};
+
+        jsonfile.spaces = 4;
+        jsonfile.writeFile('the_donald.json', output, (err) => {
+          if (err) {
+            console.log(err);
+          } else {
+          console.log('file written');
+          }
+        });
+
+        res.json(output);
+      });
+
+
+    }
   });
 });
 
 app.listen('8081')
 
-console.log('Magic happens on port 8081');
+console.log('Listening on port 8081');
 
 exports = module.exports = app;

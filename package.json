@@ -1,12 +1,16 @@
 {
-  "name"         : "node-web-scrape",
-  "version"      : "0.0.1",
-  "description"  : "Scrape le web.",
-  "main"         : "server.js",
-  "author"       : "Scotch",
-  "dependencies" : {
-    "express"    : "latest",
-    "request"    : "latest",
-    "cheerio"    : "latest"
+  "name": "reddit-scraper",
+  "version": "0.0.1",
+  "description": "for analysis of reddit comments",
+  "main": "reddit-request.js",
+  "author": "Mitch Rivet",
+  "dependencies": {
+    "async": "^2.1.2",
+    "bluebird": "^3.4.6",
+    "express": "latest",
+    "jsonfile": "^2.4.0",
+    "lodash": "^4.16.6",
+    "request": "latest",
+    "sentiment": "^2.1.0"
   }
-  }
+}
