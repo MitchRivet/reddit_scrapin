@@ -49,7 +49,7 @@ function *findReplies(comment) {
 }
 
 app.get('/scrape', (req, res) => {
-  var url = 'https://www.reddit.com/r/The_Donald/comments/5axzor/feel_that_sharp_knife_in_your_back_bernie/.json';
+  var url = 'https://www.reddit.com/r/politics/comments/5dguee/megyn_kelly_fox_news_had_to_explain_to_trump/.json';
   var allComments = [];
 
   request(url, (err, response, html) => {
@@ -111,21 +111,19 @@ app.get('/scrape', (req, res) => {
           }
         })
       }, (err, result) => {
-        let output = {title: 'Feel the sharp knife in your back, Bernie supporters? vote trump', comments: result, wordCloud: wordCloud};
+        let output = {title: 'Megyn Kelly', comments: result, wordCloud: wordCloud};
 
         jsonfile.spaces = 4;
-        jsonfile.writeFile('the_donald.json', output, (err) => {
+        jsonfile.writeFile('megyn_kelly.json', output, (err) => {
           if (err) {
             console.log(err);
           } else {
-          console.log('file written');
+          console.log('json file written');
           }
         });
 
         res.json(output);
       });
-
-
     }
   });
 });

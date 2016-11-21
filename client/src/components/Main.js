@@ -3,17 +3,24 @@ require('styles/App.css');
 var ReactD3 = require('react-d3-components');
 var ScatterPlot = ReactD3.ScatterPlot;
 var _ = require('lodash');
+import { VictoryScatter, VictoryAxis, VictoryChart } from 'victory';
+
 
 import { TagCloud } from "react-tagcloud";
 
-var data = require('json!./../../../hilary_says_donald_wants.json');
+var data = require('json!./../../../megyn_kelly.json');
 var string = JSON.stringify(data);
 
 import React from 'react';
 
 
-//foreach in data.comments,
-const plot = _.take(_.map(data.comments, (c) => {return {x: c.score.score, y: c.sentAvg}}), 100);
+//foreach in data.comments
+const plot = _.take(_.map(data.comments, (c) => {return {x: c.score.score, y: c.sentAvg}}), 50);
+
+//victory chart test
+// , label: c.author + ': ' + c.body
+const victoryScatterData = _.map(data.comments, (c) => {return {x: c.score.score, y: c.sentAvg}});
+
 console.log(plot);
 
 const scatterData = [
@@ -58,6 +65,16 @@ class AppComponent extends React.Component {
                 margin={{top: 50, bottom: 50, left: 50, right: 50}}
                 xAxis={{label: "comment sentiment"}}
                 yAxis={{label: "user sentiment"}}/>
+          <VictoryChart>
+          <VictoryScatter data={ victoryScatterData }
+          style={{
+            data: {fill: (d) => d.averageSentiment > 0 ? "red" : "blue"},
+            labels: {fontSize: 12},
+            parent: {border: "1px solid #ccc"}
+            }}>
+
+            </VictoryScatter>
+            </VictoryChart>
 
         </div>
       </div>

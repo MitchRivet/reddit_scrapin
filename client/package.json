@@ -69,6 +69,8 @@
     "react": "^15.3.2",
     "react-d3-components": "^0.6.5",
     "react-dom": "^0.14.8",
-    "react-tagcloud": "^0.6.1"
+    "react-tagcloud": "^0.6.1",
+    "rechart": "^0.0.1",
+    "victory": "^0.13.3"
   }
 }
